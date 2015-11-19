@@ -161,7 +161,7 @@ void GuestSnapshot::loadMappings(void)
 
 		if (mem->is32Bit() && (begin.o > (1ULL << 32))) {
 			fprintf(stderr,
-				"[VEXLLVM] Snapshot ignoring %p\n",
+				"[Guest] Snapshot ignoring %p\n",
 				(void*)begin.o);
 			continue;
 		}

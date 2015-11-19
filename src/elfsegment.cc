@@ -130,7 +130,7 @@ void ElfSegment::makeMapping(int fd, const Elf_Phdr& phdr)
 	assert (res == 0 && es_mmapbase.o != 0 && "failed to map segment");
 
 
-	if (getenv("VEXLLVM_LOG_MAPPINGS")) {
+	if (getenv("GUEST_LOG_MAPPINGS")) {
 		std::cerr << "mapped section @ "
 			<< (void*)((uintptr_t)desired_base.o)
 			<< " to " << (void*)((uintptr_t)es_mmapbase.o)

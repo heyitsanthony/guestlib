@@ -124,8 +124,8 @@ void ElfImg::setupImgMMap(void)
 
 void ElfImg::setup(void)
 {
-	if(getenv("VEXLLVM_LIBRARY_ROOT"))
-		library_root.assign(getenv("VEXLLVM_LIBRARY_ROOT"));
+	if(getenv("GUEST_LIBRARY_ROOT"))
+		library_root.assign(getenv("GUEST_LIBRARY_ROOT"));
 
 	if (address_bits == 64)
 		setupSegments<Elf64_Ehdr, Elf64_Phdr>();

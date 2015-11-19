@@ -149,7 +149,7 @@ void GuestELF::setupArgPages()
 	}
 	exe_string = sp;
 
-	if (getenv("VEXLLVM_LOG_MAPPINGS")) {
+	if (getenv("GUEST_LOG_MAPPINGS")) {
 		std::cerr << "stack @ " << (void*)stack_limit.o << " sz "
 			<< (void*)size << std::endl;
 	}
@@ -338,7 +338,7 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 
 	createElfTables(argc, envc);
 
-	if(getenv("VEXLLVM_DUMP_MAPS")) {
+	if(getenv("GUEST_DUMP_MAPS")) {
 		std::list<ElfSegment*> m;
 		img->getSegments(m);
 		foreach(it, m.begin(), m.end()) {

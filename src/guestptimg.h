@@ -52,14 +52,14 @@ public:
 		int			sys_nr;
 		const char		*bp;
 
-		bp = (getenv("VEXLLVM_REAL_BINPATH"))
-			? getenv("VEXLLVM_REAL_BINPATH")
+		bp = (getenv("GUEST_REAL_BINPATH"))
+			? getenv("GUEST_REAL_BINPATH")
 			: argv[0];
 		pt_t = new T(bp);
 		pt_img = pt_t;
 		
-		sys_nr = (getenv("VEXLLVM_WAIT_SYSNR") != NULL)
-			? atoi(getenv("VEXLLVM_WAIT_SYSNR"))
+		sys_nr = (getenv("GUEST_WAIT_SYSNR") != NULL)
+			? atoi(getenv("GUEST_WAIT_SYSNR"))
 			: -1;
 
 		slurped_pid = (sys_nr == -1)

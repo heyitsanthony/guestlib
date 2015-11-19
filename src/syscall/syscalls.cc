@@ -20,11 +20,11 @@ Syscalls::Syscalls(Guest* g)
 , cpu_state(g->getCPUState())
 , mappings(g->getMem())
 , binary(g->getBinaryPath())
-, log_syscalls(getenv("VEXLLVM_SYSCALLS") ? true : false)
+, log_syscalls(getenv("GUEST_SYSCALLS") ? true : false)
 {}
 
-const std::string Syscalls::chroot(getenv("VEXLLVM_CHROOT") ?
-	getenv("VEXLLVM_CHROOT") : "");
+const std::string Syscalls::chroot(getenv("GUEST_CHROOT") ?
+	getenv("GUEST_CHROOT") : "");
 	
 Syscalls::~Syscalls() {}
 
@@ -226,7 +226,7 @@ bool Syscalls::interceptSyscall(
 bool SyscallXlate::force_xlate_syscalls;
 SyscallXlate::SyscallXlate()
 {
-	force_xlate_syscalls = getenv("VEXLLVM_XLATE_SYSCALLS")
+	force_xlate_syscalls = getenv("GUEST_XLATE_SYSCALLS")
 		? true
 		: false;
 }

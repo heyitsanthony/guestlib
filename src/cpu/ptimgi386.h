@@ -28,7 +28,7 @@ protected:
 	/* return PC iff on cpuid instruction, otherwise 0 */
 	uint64_t checkCPUID(void);
 
-	/* provided by VEXLLVM_FAKE_CPUID */
+	/* provided by GUEST_FAKE_CPUID */
 	std::set<uint64_t>		patch_offsets;
 	/* overwritten instructions (addr, data) */
 	std::map<uint64_t, uint64_t>	cpuid_insts;

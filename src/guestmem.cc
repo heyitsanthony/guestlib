@@ -20,7 +20,7 @@ GuestMem::GuestMem(void)
 , base_brick(0)
 , reserve_brick(0)
 , is_32_bit(false)
-, force_flat(getenv("VEXLLVM_4GB_REBASE") == NULL)
+, force_flat(getenv("GUEST_4GB_REBASE") == NULL)
 , syspage_data(NULL)
 {
 	const char	*base_str;
@@ -31,7 +31,7 @@ GuestMem::GuestMem(void)
 	if (!force_flat)
 		base = (char*)(uintptr_t)0x100000000;
 #endif
-	base_str = getenv("VEXLLVM_BASE_BIAS");
+	base_str = getenv("GUEST_BASE_BIAS");
 	if (base_str) {
 		assert (base == NULL && "Double setting base!");
 		if (base_str[1] == 'x') {
@@ -41,7 +41,7 @@ GuestMem::GuestMem(void)
 		} else {
 			base = (char*)((uintptr_t)atoi(base_str));
 		}
-		fprintf(stderr, "[VEXLLVM] Rebased to %p\n", base);
+		fprintf(stderr, "[Guest] Rebased to %p\n", base);
 	}
 
 	/* since we are managing the address space now,
@@ -618,7 +618,7 @@ int GuestMem::munmap(guest_ptr addr, size_t len)
 	/* TODO make sure this is a real mapped region in a better
 	   way then if munmap fails? */
 	if (!isMapped(addr)) {
-		std::cerr << "[VEXLLVM] trying to munmap missing mapping: ";
+		std::cerr << "[Guest] trying to munmap missing mapping: ";
 		m.print(std::cerr);
 	}
 

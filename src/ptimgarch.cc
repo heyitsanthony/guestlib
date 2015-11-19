@@ -20,9 +20,9 @@ PTImgArch::PTImgArch(GuestPTImg* in_gs, int in_pid)
 {
 	const char* step_gauge;
 
-	log_steps = (getenv("VEXLLVM_LOG_STEPS")) ? true : false;
+	log_steps = (getenv("GUEST_LOG_STEPS")) ? true : false;
 
-	step_gauge = getenv("VEXLLVM_STEP_GAUGE");
+	step_gauge = getenv("GUEST_STEP_GAUGE");
 	if (step_gauge == NULL) {
 		log_gauge_overflow = 0;
 	} else {

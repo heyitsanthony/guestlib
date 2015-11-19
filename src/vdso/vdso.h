@@ -1,5 +1,5 @@
-#ifndef VEXLLVM_VDSO_H
-#define VEXLLVM_VDSO_H
+#ifndef GUEST_VDSO_H
+#define GUEST_VDSO_H
 
 struct vdso_ent
 {

@@ -55,9 +55,9 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 	bool	use_32bit_arch;
 
 	mem = new GuestMem();
-	ProcMap::dump_maps = (getenv("VEXLLVM_DUMP_MAPS")) ? true : false;
+	ProcMap::dump_maps = (getenv("GUEST_DUMP_MAPS")) ? true : false;
 
-	use_32bit_arch = (getenv("VEXLLVM_32_ARCH") != NULL);
+	use_32bit_arch = (getenv("GUEST_32_ARCH") != NULL);
 
 	entry_pt = guest_ptr(0);
 	if (binpath != NULL && use_entry)  {
@@ -138,7 +138,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP);
 	fprintf(stderr, "Attached to PID=%d\n", pid);
 
-	if (getenv("VEXLLVM_NOSYSCALL") == NULL)
+	if (getenv("GUEST_NOSYSCALL") == NULL)
 		attachSyscall(pid);
 	else
 		slurpBrains(pid);
@@ -168,13 +168,13 @@ static void setupChild(char *const argv[], char *const envp[])
 
 	setupTraceMe();
 
-	if (getenv("VEXLLVM_LIBRARY_PATH")) {
-		setenv("LD_LIBRARY_PATH", getenv("VEXLLVM_LIBRARY_PATH"), 1);
+	if (getenv("GUEST_LIBRARY_PATH")) {
+		setenv("LD_LIBRARY_PATH", getenv("GUEST_LIBRARY_PATH"), 1);
 		new_env = 1;
 	}
 
-	if (getenv("VEXLLVM_PRELOAD")) {
-		setenv("LD_PRELOAD", getenv("VEXLLVM_PRELOAD"), 1);
+	if (getenv("GUEST_PRELOAD")) {
+		setenv("LD_PRELOAD", getenv("GUEST_PRELOAD"), 1);
 		new_env = 1;
 	}
 
@@ -263,7 +263,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 }
 
 /* this is mainly to support programs that are shared libraries;
- * use VEXLLVM_WAIT_SYSNR=sys_munmap */
+ * use GUEST_WAIT_SYSNR=sys_munmap */
 pid_t GuestPTImg::createSlurpedOnSyscall(
 	int argc, char *const argv[], char *const envp[],
 	unsigned sys_nr)
@@ -421,7 +421,7 @@ void GuestPTImg::slurpArgPtrs(char *const argv[])
 	}
 #else
 	fprintf(stderr,
-		"[VEXLLVM] WARNING: can not get argv for current arch\n");
+		"[Guest] WARNING: can not get argv for current arch\n");
 #endif
 }
 
@@ -488,7 +488,7 @@ void GuestPTImg::waitForEntry(int pid)
 	int		err, status;
 	const char	*fake_cpuid;
 
-	fake_cpuid = getenv("VEXLLVM_FAKE_CPUID");
+	fake_cpuid = getenv("GUEST_FAKE_CPUID");
 	if (fake_cpuid != NULL) {
 		pt_arch->setFakeInfo(fake_cpuid);
 		if (pt_arch->stepInitFixup() == false) {
@@ -548,7 +548,7 @@ const Symbols* GuestPTImg::getDynSymbols(void) const
 	return dyn_symbols;
 }
 
-/* This is a really shitty hack to force VEXLLVM_PRELOAD libraries
+/* This is a really shitty hack to force GUEST_PRELOAD libraries
  * to override default symbols. In the future, we need to support
  * duplicate symbols */
 void GuestPTImg::forcePreloads(
@@ -560,7 +560,7 @@ void GuestPTImg::forcePreloads(
 	unsigned	preload_len;
 	char*		preload_libs;
 
-	preload_str = getenv("VEXLLVM_PRELOAD");
+	preload_str = getenv("GUEST_PRELOAD");
 	if (preload_str == NULL) return;
 
 	preload_len = strlen(preload_str);
@@ -585,7 +585,7 @@ void GuestPTImg::forcePreloads(
 
 		if (base.o == 0) {
 			std::cerr << "[Warning] "
-				<< "Could not find VEXLLVM_PRELOAD library '"
+				<< "Could not find GUEST_PRELOAD library '"
 				<< cur_lib << "'\n";
 			continue;
 		}

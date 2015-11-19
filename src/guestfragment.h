@@ -1,6 +1,6 @@
 /* a guest for representing a single code fragment */
-#ifndef VEXLLVM_GUESTFRAGMENT_H
-#define VEXLLVM_GUESTFRAGMENT_H
+#ifndef GUEST_GUESTFRAGMENT_H
+#define GUEST_GUESTFRAGMENT_H
 
 #include "guest.h"
 
