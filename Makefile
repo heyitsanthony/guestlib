@@ -1,4 +1,4 @@
-CFLAGS = -std=c++14 -g -O3 -I`pwd`/src/
+CFLAGS = -std=c++14 -Wall -g -O3 -I`pwd`/src/
 
 CORECC=clang++
 CORELINK=clang++
