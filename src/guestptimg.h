@@ -41,7 +41,7 @@ class GuestPTImg : public Guest
 {
 public:
 	virtual ~GuestPTImg(void);
-	guest_ptr getEntryPoint(void) const { return entry_pt; }
+	guest_ptr getEntryPoint(void) const override { return entry_pt; }
 
 	template <class T>
 	static T* create(int argc, char* const argv[], char* const envp[])
@@ -121,24 +121,15 @@ public:
 
 	void printTraceStats(std::ostream& os);
 
-	virtual Arch::Arch getArch() const { return arch; }
-	virtual const Symbols* getSymbols(void) const;
-	virtual Symbols* getSymbols(void);
-	virtual const Symbols* getDynSymbols(void) const;
-
-	virtual std::vector<guest_ptr> getArgvPtrs(void) const
+	Arch::Arch getArch() const override { return arch; }
+	std::vector<guest_ptr> getArgvPtrs(void) const override
 	{ return argv_ptrs; }
 
-	virtual guest_ptr getArgcPtr(void) const { return argc_ptr; }
+	guest_ptr getArgcPtr(void) const override { return argc_ptr; }
 
 
 	void setBreakpoint(guest_ptr addr);
 	void resetBreakpoint(guest_ptr addr);
-
-	static Symbols* loadSymbols(const ptr_list_t<ProcMap>& mappings);
-	static Symbols* loadDynSymbols(
-		GuestMem	*mem,
-		const char	*binpath);
 
 	static void stackTrace(
 		std::ostream& os, const char* binname, pid_t pid,
@@ -163,6 +154,9 @@ protected:
 	void fixupRegsPreSyscall(int pid);
 	void slurpThreads(void);
 
+	std::unique_ptr<Symbols> loadSymbols() const override;
+	std::unique_ptr<Symbols> loadDynSymbols() const override;
+
 	PTImgArch		*pt_arch;
 	PTShadow		*pt_shadow;
 	Arch::Arch		arch;
@@ -180,14 +174,11 @@ private:
 	void waitForEntry(int pid);
 	void slurpArgPtrs(char *const argv[]);
 	static void forcePreloads(
-		Symbols			*symbols,
+		Symbols			&symbols,
 		std::set<std::string>	&mmap_fnames,
 		const ptr_list_t<ProcMap>& mappings);
 
-
 	std::map<guest_ptr, uint64_t>	breakpoints;
-	mutable Symbols			*symbols; // lazy loaded
-	mutable Symbols			*dyn_symbols;
 	std::vector<guest_ptr>		argv_ptrs;
 	guest_ptr			argc_ptr;
 };

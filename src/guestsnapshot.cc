@@ -58,8 +58,6 @@ GuestSnapshot* GuestSnapshot::create(const char* dirpath)
 GuestSnapshot::GuestSnapshot(const char* dirpath)
 : Guest(NULL)
 , is_valid(false)
-, syms(NULL)
-, dyn_syms(NULL)
 , srcdir(dirpath)
 {
 	ssize_t	sz;
@@ -101,9 +99,6 @@ GuestSnapshot::GuestSnapshot(const char* dirpath)
 	}
 
 	loadMappings();
-	syms = loadSymbols("syms");
-	dyn_syms = loadSymbols("dynsyms");
-
 
 	/* XXX: super-lame windows detection */
 	SETUP_F_R_MAYBE("platform/process_cookie");
@@ -205,11 +200,18 @@ void GuestSnapshot::loadMappings(void)
 	END_F()
 }
 
-Symbols* GuestSnapshot::loadSymbols(const char* name)
-{
-	Symbols	*ret;
+std::unique_ptr<Symbols> GuestSnapshot::loadSymbols(void) const {
+	return loadSymbols("syms");
+}
 
-	ret = new Symbols();
+std::unique_ptr<Symbols> GuestSnapshot::loadDynSymbols(void) const {
+	return loadSymbols("dynsyms");
+}
+
+std::unique_ptr<Symbols> GuestSnapshot::loadSymbols(const char* name) const
+{
+	auto ret = std::make_unique<Symbols>();
+
 	SETUP_F_R(name);
 
 	do {
@@ -234,9 +236,6 @@ GuestSnapshot::~GuestSnapshot(void)
 	foreach (it, fd_list.begin(), fd_list.end()) {
 		close(*it);
 	}
-
-	if (syms != NULL) delete syms;
-	if (dyn_syms != NULL) delete dyn_syms;
 }
 
 #define SETUP_F_W(x)			\
@@ -447,22 +446,20 @@ void GuestSnapshot::saveDiff(
 }
 
 void GuestSnapshot::saveSymbols(
-	const Symbols* g_syms,
+	const Symbols& g_syms,
 	const char* dirpath,
 	const char* name)
 {
 	SETUP_F_W(name);
-	if (g_syms == NULL) goto done;
 
-	foreach (it, g_syms->begin(), g_syms->end()) {
-		const Symbol	*cur_sym = it->second;
+	for (const auto &p : g_syms) {
+		const Symbol	*cur_sym = p.second;
 		fprintf(f, "%s %" PRIx64 "-%" PRIx64 "\n",
-			it->first.c_str(),
+			p.first.c_str(),
 			(uint64_t)cur_sym->getBaseAddr(),
 			(uint64_t)cur_sym->getEndAddr());
 	}
 
-done:
 	END_F();
 }
 

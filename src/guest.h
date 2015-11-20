@@ -45,11 +45,13 @@ public:
 	void setSyscallResult(uint64_t ret);
 
 	virtual std::string getName(guest_ptr) const;
-	virtual const Symbols* getSymbols(void) const { return NULL; }
-	virtual Symbols* getSymbols(void) { return NULL; }
-	virtual const Symbols* getDynSymbols(void) const { return NULL; }
+
+	const Symbols& getSymbols(void) const;
+	Symbols& getSymbols(void);
+	const Symbols& getDynSymbols(void) const;
+
 	void addLibrarySyms(const char* path, guest_ptr base);
-	static void addLibrarySyms(const char* path, guest_ptr base, Symbols* s);
+	static void addLibrarySyms(const char* path, guest_ptr base, Symbols& s);
 
 	uint64_t getExitCode(void) const;
 	void print(std::ostream& os) const;
@@ -88,10 +90,15 @@ public:
 	/* XXX: does this go here even? */
 	bool patchVDSO(void);
 	bool isPatchedVDSO(void) const;
+
 protected:
 	friend class GuestPTImg;
+
 	void setBinPath(const char* b);
 	Guest(const char* bin_path);
+
+	virtual std::unique_ptr<Symbols> loadSymbols(void) const;
+	virtual std::unique_ptr<Symbols> loadDynSymbols(void) const;
 
 	/* active thread */
 	GuestCPUState	*cpu_state;
@@ -101,7 +108,11 @@ protected:
 
 	/* idle threads; does NOT contain cpu_state */
 	/* XXX: should this be a ptrlist? */
-	std::vector<GuestCPUState*>	thread_cpus;
+	std::vector<GuestCPUState*>		thread_cpus;
+
+	// so const getSymbols will lazy load
+	mutable std::unique_ptr<Symbols>	symbols;
+	mutable std::unique_ptr<Symbols>	dyn_symbols;
 };
 
 #endif

@@ -18,16 +18,13 @@ public:
 		const char* last_dirname,
 		const std::set<guest_ptr>& changed_maps);
 
-	virtual guest_ptr getEntryPoint(void) const { return entry_pt; }
-	virtual Arch::Arch getArch(void) const { return arch; }
+	guest_ptr getEntryPoint(void) const override { return entry_pt; }
+	Arch::Arch getArch(void) const override { return arch; }
 
-	virtual const Symbols* getSymbols(void) const { return syms; }
-	virtual Symbols* getSymbols(void) { return syms; }
-	virtual const Symbols* getDynSymbols(void) const { return dyn_syms; }
-	virtual std::vector<guest_ptr> getArgvPtrs(void) const
+	std::vector<guest_ptr> getArgvPtrs(void) const override
 	{ return argv_ptrs; }
 
-	virtual guest_ptr getArgcPtr(void) const { return argc_ptr; }
+	guest_ptr getArgcPtr(void) const override { return argc_ptr; }
 
 	const std::string& getPath(void) const { return srcdir; }
 
@@ -36,13 +33,16 @@ public:
 protected:
 	GuestSnapshot(const char* dirname);
 
+	std::unique_ptr<Symbols> loadSymbols(const char* name) const;
+	std::unique_ptr<Symbols> loadSymbols(void) const override;
+	std::unique_ptr<Symbols> loadDynSymbols(void) const override;
+
 private:
 	static void saveSymbols(
-		const Symbols* g_syms,
+		const Symbols& g_syms,
 		const char* dirpath,
 		const char* name);
 
-	Symbols* loadSymbols(const char* name);
 	void loadMappings(void);
 	void loadThreads(void);
 
@@ -50,8 +50,6 @@ private:
 	guest_ptr		entry_pt;
 	Arch::Arch		arch;
 	std::list<int>		fd_list;
-	Symbols			*syms;
-	Symbols			*dyn_syms;
 	std::vector<guest_ptr>	argv_ptrs;
 	guest_ptr		argc_ptr;
 

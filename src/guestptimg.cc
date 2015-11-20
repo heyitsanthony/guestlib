@@ -49,8 +49,6 @@ GuestPTImg::GuestPTImg(const char* binpath, bool use_entry)
 , pt_arch(NULL)
 , pt_shadow(NULL)
 , arch(Arch::getHostArch())
-, symbols(NULL)
-, dyn_symbols(NULL)
 {
 	bool	use_32bit_arch;
 
@@ -88,8 +86,6 @@ GuestPTImg::~GuestPTImg(void)
 {
 	delete pt_arch;
 	// delete pt_shadow; aliased if available
-	delete symbols;
-	delete dyn_symbols;
 }
 
 void GuestPTImg::handleChild(pid_t pid)
@@ -248,7 +244,8 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	argc_ptr = gs->getArgcPtr();
 #endif
 
-	symbols = new Symbols(*gs->getSymbols());
+	gs->getSymbols(); // force symbol load
+	symbols = std::move(gs->symbols);
 
 	/* this needs guestptimg to be a 'friend' of guest */
 	gs->cpu_state = NULL;
@@ -529,30 +526,11 @@ void GuestPTImg::resetBreakpoint(guest_ptr addr)
 	breakpoints.erase(addr);
 }
 
-const Symbols* GuestPTImg::getSymbols(void) const
-{
-	if (!symbols) symbols = loadSymbols(mappings);
-	return symbols;
-}
-
-Symbols* GuestPTImg::getSymbols(void)
-{
-	if (!symbols) symbols = loadSymbols(mappings);
-	return symbols;
-}
-
-const Symbols* GuestPTImg::getDynSymbols(void) const
-{
-	if (!dyn_symbols)
-		dyn_symbols = loadDynSymbols(mem, getBinaryPath());
-	return dyn_symbols;
-}
-
 /* This is a really shitty hack to force GUEST_PRELOAD libraries
  * to override default symbols. In the future, we need to support
  * duplicate symbols */
 void GuestPTImg::forcePreloads(
-	Symbols			*symbols,
+	Symbols			&syms,
 	std::set<std::string>	&mmap_fnames,
 	const ptr_list_t<ProcMap>& mappings)
 {
@@ -590,21 +568,20 @@ void GuestPTImg::forcePreloads(
 			continue;
 		}
 
-		addLibrarySyms(cur_lib, base, symbols);
+		addLibrarySyms(cur_lib, base, syms);
 		mmap_fnames.insert(cur_lib);
 	}
 
 	free(preload_libs);
 }
 
-Symbols* GuestPTImg::loadSymbols(const ptr_list_t<ProcMap>& mappings)
+std::unique_ptr<Symbols> GuestPTImg::loadSymbols(void) const
 {
-	Symbols			*symbols;
 	std::set<std::string>	mmap_fnames;
 
-	symbols = new Symbols();
+	auto new_syms = std::make_unique<Symbols>();
 
-	forcePreloads(symbols, mmap_fnames, mappings);
+	forcePreloads(*new_syms, mmap_fnames, mappings);
 
 	for (auto &mapping : mappings) {
 		std::string	libname(mapping->getLib());
@@ -618,27 +595,22 @@ Symbols* GuestPTImg::loadSymbols(const ptr_list_t<ProcMap>& mappings)
 			continue;
 
 		/* new fname, try to load the symbols */
-		addLibrarySyms(libname.c_str(), base, symbols);
+		addLibrarySyms(libname.c_str(), base, *new_syms);
 
 		mmap_fnames.insert(libname);
 	}
 
-	return symbols;
+	return new_syms;
 }
 
-Symbols* GuestPTImg::loadDynSymbols(
-	GuestMem	*mem,
-	const char	*binpath)
+std::unique_ptr<Symbols> GuestPTImg::loadDynSymbols(void) const
 {
-	Symbols	*dyn_syms;
-	Symbols	*exec_syms;
-
-	dyn_syms = new Symbols();
+	auto dyn_syms = std::make_unique<Symbols>();
 
 	/* XXX, in the future, we should look at what is in the
 	 * jump slots, for now, we rely on the symbol and hope no one
 	 * is hijacking the jump table */
-	exec_syms = ElfDebug::getLinkageSyms(mem, binpath);
+	auto exec_syms = ElfDebug::getLinkageSyms(mem, getBinaryPath());
 	if (exec_syms) {
 		dyn_syms->addSyms(exec_syms);
 		delete exec_syms;

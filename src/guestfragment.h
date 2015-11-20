@@ -15,7 +15,6 @@ public:
 	virtual ~GuestFragment();
 	virtual guest_ptr getEntryPoint(void) const { return guest_base; }
 	virtual std::string getName(guest_ptr) const;
-	virtual const Symbols* getSymbols(void) const { return NULL; }
 	virtual Arch::Arch getArch() const { return arch; }
 	unsigned int getCodeLength(void) const { return code_len; }
 	unsigned int getCodePageBytes(void) const

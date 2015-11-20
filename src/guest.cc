@@ -58,22 +58,39 @@ void Guest::setSyscallResult(uint64_t ret) { abi->setSyscallResult(ret); }
 uint64_t Guest::getExitCode(void) const { return abi->getExitCode(); }
 
 
+const Symbols& Guest::getSymbols(void) const
+{
+	if (!symbols) symbols = loadSymbols();
+	return *symbols;
+}
+
+Symbols& Guest::getSymbols(void)
+{
+	if (!symbols) symbols = loadSymbols();
+	return *symbols;
+}
+
+const Symbols& Guest::getDynSymbols(void) const
+{
+	if (!dyn_symbols) dyn_symbols = loadDynSymbols();
+	return *dyn_symbols;
+}
+
+std::unique_ptr<Symbols> Guest::loadSymbols(void) const {
+	return std::make_unique<Symbols>();
+}
+std::unique_ptr<Symbols> Guest::loadDynSymbols(void) const {
+	return std::make_unique<Symbols>();
+}
+
 std::string Guest::getName(guest_ptr x) const
 {
-	const Symbol	*sym_found;
-	const Symbols	*syms;
-
-	syms = getSymbols();
-	if (syms == NULL)
+	auto sym_found = getSymbols().findSym(x);
+	if (sym_found == nullptr) {
 		return hex_to_string(x);
-
-	sym_found = syms->findSym(x);
-	if (sym_found != NULL) {
-		return (sym_found->getName()+"+")+
-			hex_to_string((intptr_t)x-sym_found->getBaseAddr());
 	}
-
-	return hex_to_string(x); 
+	return (sym_found->getName()+"+")+
+		hex_to_string((intptr_t)x-sym_found->getBaseAddr());
 }
 
 void Guest::print(std::ostream& os) const { cpu_state->print(os); }
@@ -129,21 +146,16 @@ std::unique_ptr<Guest> Guest::load(const char* dirpath)
 
 void Guest::addLibrarySyms(const char* path, guest_ptr base)
 {
-	Symbols	*cur_syms = getSymbols();
-	if (cur_syms == NULL)
-		return;
-	addLibrarySyms(path, base, cur_syms);
+	addLibrarySyms(path, base, getSymbols());
 }
 
-void Guest::addLibrarySyms(const char* path, guest_ptr base, Symbols* cur_syms)
+void Guest::addLibrarySyms(const char* path, guest_ptr base, Symbols& cur_syms)
 {
-	Symbols*	new_syms;
-
-	new_syms = ElfDebug::getSyms(path, base);
+	auto new_syms = ElfDebug::getSyms(path, base);
 	if (new_syms == NULL)
 		return;
 
-	cur_syms->addSyms(new_syms);
+	cur_syms.addSyms(new_syms);
 	delete new_syms;
 }
 
