@@ -439,13 +439,12 @@ void GuestPTImg::slurpBrains(pid_t pid)
 
 void GuestPTImg::slurpThreads(void)
 {
-	std::list<GuestMem::Mapping>	m(mem->getMaps());
 	std::vector<int>		t_pids;
 
 	/* get thread pids from stack names */
-	foreach (it, m.begin(), m.end()) {
+	for (const auto& m : mem->getMaps()) {
 		int	t_pid, c;
-		c = sscanf(it->getName().c_str(), "[stack:%d]", &t_pid);
+		c = sscanf(m.getName().c_str(), "[stack:%d]", &t_pid);
 		if (c != 1) continue;
 		t_pids.push_back(t_pid);
 	}

@@ -52,8 +52,8 @@ GuestMem::GuestMem(void)
 
 GuestMem::~GuestMem(void)
 {
-	foreach (it, maps.begin(), maps.end()) {
-		Mapping	*m = it->second;
+	for (const auto &p : maps) {
+		Mapping	*m = p.second;
 		/* XXX: NOTE: won't call subtype's sys_munmap!! */
 		sys_munmap(getHostPtr(m->offset), m->length);
 		delete m;
@@ -309,8 +309,8 @@ bool GuestMem::lookupMapping(guest_ptr addr, Mapping& mapping) const
 
 bool GuestMem::lookupMapping(const char* name, Mapping& mapping) const
 {
-	foreach (it, maps.begin(), maps.end()) {
-		const Mapping	*m(it->second);
+	for (const auto &p : maps) {
+		const Mapping	*m(p.second);
 		if (m->name && *(m->name) == name) {
 			mapping = *m;
 			return true;
@@ -386,8 +386,8 @@ std::list<GuestMem::Mapping> GuestMem::getMaps(void) const
 {
 	std::list<Mapping>	ret;
 
-	foreach (it, maps.begin(), maps.end()) {
-		Mapping	m(*(it->second));
+	for (const auto &p : maps) {
+		Mapping	m(*(p.second));
 		if (!(m.req_prot & PROT_READ))
 			continue;
 		ret.push_back(m);

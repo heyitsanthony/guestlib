@@ -131,10 +131,10 @@ bool PTImgI386::stepInitFixup(void)
 	}
 
 	/* find bias of cpuid instruction w/r/t patch offsets */
-	foreach (it, patch_offsets.begin(), patch_offsets.end()) {
+	for (const auto off : patch_offsets) {
 		/* XXX: "research quality" */
-		if ((*it & 0xfff) == (cpuid_pc & 0xfff)) {
-			bias = cpuid_pc - *it;
+		if ((off & 0xfff) == (cpuid_pc & 0xfff)) {
+			bias = cpuid_pc - off;
 			break;
 		}
 	}

@@ -341,14 +341,14 @@ void GuestELF::setArgv(unsigned int argc, const char* argv[],
 	if(getenv("GUEST_DUMP_MAPS")) {
 		std::list<ElfSegment*> m;
 		img->getSegments(m);
-		foreach(it, m.begin(), m.end()) {
+		for (const auto seg : m) {
 			std::ostringstream save_fname;
 			save_fname << argv[0] << "." << getpid()
-				<< "." << (*it)->base();
+				<< "." << seg->base();
 			std::ofstream o(save_fname.str().c_str());
-			char* buffer = new char[(*it)->length()];
-			mem->memcpy(buffer, (*it)->base(), (*it)->length());
-			o.write(buffer, (*it)->length());
+			char* buffer = new char[seg->length()];
+			mem->memcpy(buffer, seg->base(), seg->length());
+			o.write(buffer, seg->length());
 			delete [] buffer;
 		}
 		std::ostringstream save_fname;

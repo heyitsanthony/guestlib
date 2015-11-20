@@ -6,8 +6,7 @@
 Symbols::~Symbols()
 {
 	/* free all allocated symbols */
-	foreach (it, addr_map.begin(), addr_map.end())
-		delete (*it).second;
+	for (auto &p : addr_map) delete p.second;
 }
 
 Symbols::Symbols(const Symbols& s)
@@ -18,12 +17,8 @@ Symbols::Symbols(const Symbols& s)
 
 const Symbol* Symbols::findSym(const std::string& s) const
 {
-	symname_map::const_iterator it;
-
-	it = name_map.find(s);
-	if (it == name_map.end()) return NULL;
-
-	return (*it).second;
+	const auto it = name_map.find(s);
+	return (it == name_map.end()) ? nullptr : (*it).second;
 }
 
 const Symbol* Symbols::findSym(uint64_t ptr) const
@@ -57,12 +52,10 @@ const Symbol* Symbols::findSym(uint64_t ptr) const
 
 bool Symbols::addSym(const std::string& name, symaddr_t addr, unsigned int len)
 {
-	Symbol	*sym;
-
 	if (addr_map.count(addr)) return false;
 	if (name_map.count(name)) return false;
 
-	sym  = new Symbol(name, addr, len);
+	auto sym  = new Symbol(name, addr, len);
 	addr_map[addr] = sym;
 	name_map[name] = sym;
 
@@ -74,6 +67,6 @@ void Symbols::addSym(const Symbol* sym)
 
 void Symbols::addSyms(const Symbols* syms)
 {
-	foreach (it, syms->name_map.begin(), syms->name_map.end())
-		addSym(it->second);
+	for (const auto &p : syms->name_map)
+		addSym(p.second);
 }

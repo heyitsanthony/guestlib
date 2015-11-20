@@ -28,7 +28,6 @@ void* GuestMemSink::sys_mremap(
 
 GuestMemSink::~GuestMemSink(void)
 {
-	foreach (it, maps.begin(), maps.end())
-		delete it->second;
+	for (auto& p : maps) delete p.second;
 	maps.clear();
 }

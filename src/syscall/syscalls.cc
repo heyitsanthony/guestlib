@@ -274,10 +274,8 @@ uintptr_t Syscalls::passthroughSyscall(
 
 void Syscalls::print(std::ostream& os) const
 {
-	foreach(it, sc_trace.begin(), sc_trace.end()) {
-		SyscallParams	sp = *it;
+	for (const auto& sp : sc_trace)
 		print(os, sp, NULL);
-	}
 }
 
 void Syscalls::print(std::ostream& os, const SyscallParams& sp,

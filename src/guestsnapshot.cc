@@ -233,9 +233,7 @@ std::unique_ptr<Symbols> GuestSnapshot::loadSymbols(const char* name) const
 
 GuestSnapshot::~GuestSnapshot(void)
 {
-	foreach (it, fd_list.begin(), fd_list.end()) {
-		close(*it);
-	}
+	for (auto fd : fd_list) close(fd);
 }
 
 #define SETUP_F_W(x)			\
@@ -306,10 +304,8 @@ static void saveSundries(const Guest* g, const char* dirpath)
 
 	/* save argv pointers */
 	SETUP_F_W("argv")
-	std::vector<guest_ptr>	p(g->getArgvPtrs());
-	foreach (it, p.begin(), p.end()) {
-		fprintf(f, "%p\n", (void*)(it)->o);
-	}
+	for (const auto p : g->getArgvPtrs())
+		fprintf(f, "%p\n", (void*)p.o);
 	END_F()
 
 	if (g->getArgcPtr() != 0) {
@@ -365,13 +361,12 @@ void saveMappingsDiff(
 
 	/* add mappings */
 	list<GuestMem::Mapping> maps = g->getMem()->getMaps();
-	foreach (it, maps.begin(), maps.end()) {
-		FILE			*map_f;
-		GuestMem::Mapping	mapping(*it);
-		ssize_t			sz;
-		char			*buffer;
-		char			last_buf[BUFSZ];
-		struct stat		s;
+	for (const auto& mapping : g->getMem()->getMaps()) {
+		FILE		*map_f;
+		ssize_t		sz;
+		char		*buffer;
+		char		last_buf[BUFSZ];
+		struct stat	s;
 
 		/* range, prot, type, name */
 		fprintf(f, "%p-%p %d %d %s\n",
@@ -473,11 +468,9 @@ static void saveMappings(const Guest* g, const char* dirpath)
 	mkdir(buf, 0755);
 
 	/* add mappings */
-	list<GuestMem::Mapping> maps = g->getMem()->getMaps();
-	foreach (it, maps.begin(), maps.end()) {
-		FILE			*map_f;
-		GuestMem::Mapping	mapping(*it);
-		ssize_t			sz;
+	for (const auto& mapping : g->getMem()->getMaps()) {
+		FILE	*map_f;
+		ssize_t	sz;
 
 		/* range, prot, type, name */
 		fprintf(f, "%p-%p %d %d %s\n",
