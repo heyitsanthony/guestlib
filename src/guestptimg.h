@@ -43,12 +43,15 @@ public:
 	virtual ~GuestPTImg(void);
 	guest_ptr getEntryPoint(void) const override { return entry_pt; }
 
+	static pid_t createChild(
+		int argc, char* const argv[], char *const envp[]);
+
 	template <class T>
-	static T* create(int argc, char* const argv[], char* const envp[])
+	static T* create(pid_t new_pid, char* const argv[])
 	{
 		GuestPTImg		*pt_img;
 		T			*pt_t;
-		pid_t			slurped_pid;
+		bool			ok;
 		int			sys_nr;
 		const char		*bp;
 
@@ -62,24 +65,29 @@ public:
 			? atoi(getenv("GUEST_WAIT_SYSNR"))
 			: -1;
 
-		slurped_pid = (sys_nr == -1)
-			? pt_img->createSlurpedChild(argc, argv, envp)
-			: pt_img->createSlurpedOnSyscall(
-				argc, argv, envp, sys_nr);
+		ok = (sys_nr == -1)
+			? pt_img->slurpChild(new_pid, argv)
+			: pt_img->slurpChildOnSyscall(new_pid, argv, sys_nr);
 
-		if (slurped_pid <= 0) {
+		if (!ok) {
 			delete pt_img;
 			return NULL;
 		}
 
-		pt_img->handleChild(slurped_pid);
+		pt_img->handleChild(new_pid);
 		return pt_t;
 	}
 
 	template <class T>
-	static T* createAttached(
-		int pid,
-		int argc, char* const argv[], char* const envp[])
+	static T* create(int argc, char* const argv[], char* const envp[])
+	{
+		pid_t	new_pid = createChild(argc, argv, envp);
+		if (new_pid <= 0) return nullptr;
+		return create<T>(new_pid, argv);
+	}
+
+	template <class T>
+	static T* createAttached(int pid, char* const argv[])
 	{
 		GuestPTImg		*pt_img;
 		T			*pt_t;
@@ -119,8 +127,6 @@ public:
 	}
 
 
-	void printTraceStats(std::ostream& os);
-
 	Arch::Arch getArch() const override { return arch; }
 	std::vector<guest_ptr> getArgvPtrs(void) const override
 	{ return argv_ptrs; }
@@ -130,6 +136,8 @@ public:
 
 	void setBreakpoint(guest_ptr addr);
 	void resetBreakpoint(guest_ptr addr);
+	guest_ptr undoBreakpoint();
+
 
 	static void stackTrace(
 		std::ostream& os, const char* binname, pid_t pid,
@@ -141,9 +149,8 @@ public:
 	PTImgArch* getPTArch(void) const { return pt_arch; }
 	PTShadow* getPTShadow(void) const { return pt_shadow; }
 
-	guest_ptr undoBreakpoint();
-
 	void slurpRegisters(pid_t pid);
+
 protected:
 	GuestPTImg(const char* binpath, bool use_entry=true);
 	virtual void handleChild(pid_t pid);
@@ -162,13 +169,13 @@ protected:
 	Arch::Arch		arch;
 	ptr_list_t<ProcMap>	mappings;
 	guest_ptr		entry_pt;
+
 private:
-	pid_t createSlurpedChild(
-		int argc, char *const argv[], char *const envp[]);
+	bool slurpChild(pid_t pid, char *const argv[]);
+	bool slurpChildOnSyscall(
+		pid_t pid, char *const argv[], unsigned sys_nr);
+
 	pid_t createFromGuest(Guest* gs);
-	pid_t createSlurpedOnSyscall(
-		int argc, char *const argv[], char *const envp[],
-		unsigned sys_nr);
 
 
 	void waitForEntry(int pid);

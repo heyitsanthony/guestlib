@@ -158,32 +158,6 @@ static void setupTraceMe(void)
 	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 }
 
-static void setupChild(char *const argv[], char *const envp[])
-{
-	int     err, new_env = 0;
-
-	setupTraceMe();
-
-	if (getenv("GUEST_LIBRARY_PATH")) {
-		setenv("LD_LIBRARY_PATH", getenv("GUEST_LIBRARY_PATH"), 1);
-		new_env = 1;
-	}
-
-	if (getenv("GUEST_PRELOAD")) {
-		setenv("LD_PRELOAD", getenv("GUEST_PRELOAD"), 1);
-		new_env = 1;
-	}
-
-	if (new_env) {
-		err = execvp(argv[0], argv);
-	} else {
-		err = execvpe(argv[0], argv, envp);
-	}
-
-	assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
-}
-
-
 pid_t GuestPTImg::createFromGuest(Guest* gs)
 {
 	pid_t		pid;
@@ -261,34 +235,22 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 
 /* this is mainly to support programs that are shared libraries;
  * use GUEST_WAIT_SYSNR=sys_munmap */
-pid_t GuestPTImg::createSlurpedOnSyscall(
-	int argc, char *const argv[], char *const envp[],
-	unsigned sys_nr)
+bool GuestPTImg::slurpChildOnSyscall(
+	pid_t pid, char *const argv[], unsigned sys_nr)
 {
-	int			status;
-	pid_t			pid;
-	guest_ptr		break_addr;
-	unsigned		sc_c = 0;
-
-	pid = fork();
-	if (pid == 0) setupChild(argv, envp);
-	if (pid < 0) return pid;
-
 	SETUP_ARCH_PT
 
-	/* wait for child to call execve and send us a trap signal */
-	wait(&status);
-	assert (IS_SIGTRAP(status));
-
 	/* run up to expected syscall */
-	while (1) {
+	for (unsigned sc_c = 0; ; sc_c++) {
+		int	status;
+
 		/* entry into syscall */
 		ptrace(PTRACE_SYSCALL, pid, 0, NULL, NULL);
 		wait(&status);
 		if (!IS_SIGTRAP(status)) {
 			std::cerr << "[GuestPTImg] Child exited before sys_nr="
 				<< sys_nr << '\n';
-			return 0;
+			return false;
 		}
 
 		slurpRegisters(pid);
@@ -305,9 +267,8 @@ pid_t GuestPTImg::createSlurpedOnSyscall(
 		if (!IS_SIGTRAP(status)) {
 			std::cerr << "[GuestPTImg] Child exited before sys_nr="
 				<< sys_nr << '\n';
-			return 0;
+			return false;
 		}
-		sc_c++;
 	}
 
 	if (ProcMap::dump_maps) dumpSelfMap();
@@ -321,30 +282,55 @@ pid_t GuestPTImg::createSlurpedOnSyscall(
 	// slurpArgPtrs(pid, argv);
 
 	entry_pt = getCPUState()->getPC();
-	return pid;
+	return true;
 }
 
-pid_t GuestPTImg::createSlurpedChild(
+pid_t GuestPTImg::createChild(
 	int argc, char *const argv[], char *const envp[])
 {
-	int			status;
-	pid_t			pid;
-	guest_ptr		break_addr;
+	int	status;
+	pid_t	pid = fork();
 
-	assert (entry_pt.o && "No entry point given to slurp");
+	if (pid == 0) {
+		int     err, new_env = 0;
 
-	pid = fork();
-	if (pid == 0)
-		setupChild(argv, envp);
+		setupTraceMe();
 
-	/* failed to create child */
-	if (pid < 0) return pid;
+		if (getenv("GUEST_LIBRARY_PATH")) {
+			setenv("LD_LIBRARY_PATH",
+				getenv("GUEST_LIBRARY_PATH"), 1);
+			new_env = 1;
+		}
 
-	SETUP_ARCH_PT
+		if (getenv("GUEST_PRELOAD")) {
+			setenv("LD_PRELOAD", getenv("GUEST_PRELOAD"), 1);
+			new_env = 1;
+		}
+
+		if (new_env) {
+			err = execvp(argv[0], argv);
+		} else {
+			err = execvpe(argv[0], argv, envp);
+		}
+
+		assert (err != -1 && "EXECVE FAILED. NO PTIMG!");
+		abort();
+	}
+
 
 	/* wait for child to call execve and send us a trap signal */
 	wait(&status);
-	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP);
+	assert (IS_SIGTRAP(status));
+
+	// return child's pid (if any)
+	return pid;
+}
+
+bool GuestPTImg::slurpChild(pid_t pid, char *const argv[])
+{
+	assert (entry_pt.o && "No entry point given to slurp");
+
+	SETUP_ARCH_PT
 
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
@@ -353,7 +339,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	/* run until child hits entry point */
 	waitForEntry(pid);
 
-	break_addr = undoBreakpoint();
+	auto break_addr = undoBreakpoint();
 	assert (break_addr == entry_pt && "Did not break at entry");
 
 	/* hit the entry point, everything should be linked now-- load it
@@ -369,7 +355,7 @@ pid_t GuestPTImg::createSlurpedChild(
 	slurpBrains(pid);
 	slurpArgPtrs(argv);
 
-	return pid;
+	return true;
 }
 
 void GuestPTImg::slurpArgPtrs(char *const argv[])

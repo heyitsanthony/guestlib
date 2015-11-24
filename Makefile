@@ -30,14 +30,14 @@ OBJS := $(patsubst src/%,obj/%,$(OBJS))
 
 
 LIBTARGETS :=	bin/guestlib.a
-
+BINTARGETS :=	bin/guest_save
 
 .PHONY: all
-all: $(LIBTARGETS)
+all: $(LIBTARGETS) $(BINTARGETS)
 
 .PHONY: clean
 clean:
-	rm -f $(LIBTARGETS) $(OBJS)
+	rm -f $(LIBTARGETS) $(BINTARGETS) $(OBJS)
 
 .PHONY: scan-build
 scan-build:
@@ -46,19 +46,23 @@ scan-build:
 		`clang -cc1 -analyzer-checker-help | awk ' { print "-enable-checker="$1 } ' | grep '\.' | grep -v debug ` \
 		-o `pwd`/scan-out make -j7 all
 
-OUTDIRS=obj obj/cpu obj/syscall obj/vdso obj/abi
+OUTDIRS=obj obj/cpu obj/syscall obj/vdso obj/abi obj/tools
 $(OBJS): | $(OUTDIRS)
 $(OUTDIRS):
 	mkdir -p $(OUTDIRS)
 
-obj/%.o: src/%.s 
+obj/%.o: src/%.s
 	gcc -c -o $@ $< $(CFLAGS)
 
-obj/%.o: src/%.cc src/%.h 
+obj/%.o: src/%.cc src/%.h
 	$(CORECC) -c -o $@ $< $(CFLAGS)
 
-obj/%.o: src/%.cc 
+obj/%.o: src/%.cc
 	$(CORECC) -c -o $@ $< $(CFLAGS)
 
 bin/guestlib.a: $(OBJS)
 	ar r $@ $^
+
+REBASE_FLAGS="-Wl,-Ttext-segment=0xa000000"
+bin/guest_save: obj/tools/guest_save.o bin/guestlib.a
+	$(CORECC) $(REBASE_FLAGS) -o $@ $^
