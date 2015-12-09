@@ -48,10 +48,11 @@ struct pt_regs
 	struct user_fpregs_struct	fpregs;
 };
 
+
 #define GET_PTREGS()	((struct pt_regs*)state_data)
 
 PTI386CPUState::PTI386CPUState(pid_t in_pid)
-	: PTCPUState(in_pid)
+	: PTCPUState(nullptr, in_pid)
 {
 	state_byte_c = sizeof(struct pt_regs);
 	state_data = new uint8_t[state_byte_c+1];

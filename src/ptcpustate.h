@@ -26,8 +26,9 @@ public:
 	static void registerCPUs(pid_t);
 
 protected:
-	PTCPUState(pid_t in_pid)
-		: pid(in_pid)
+	PTCPUState(const guest_ctx_field* f, pid_t in_pid)
+		: GuestCPUState(f)
+		, pid(in_pid)
 		, recent_shadow(false)
 	{
 		assert(pid != 0);

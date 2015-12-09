@@ -11,8 +11,38 @@ struct pt_regs {
 	struct user_fpregs_struct	fpregs;
 };
 
+static struct guest_ctx_field ptamd64_fields[] = {
+	{64, 1, "r15"},
+	{64, 1, "r14"},
+	{64, 1, "r13"},
+	{64, 1, "r12"},
+	{64, 1, "rbp"},
+	{64, 1, "rbx"},
+	{64, 1, "r11"},
+	{64, 1, "r10"},
+	{64, 1, "r9"},
+	{64, 1, "r8"},
+	{64, 1, "rax"},
+	{64, 1, "rcx"},
+	{64, 1, "rdx"},
+	{64, 1, "rsi"},
+	{64, 1, "rdi"},
+	{64, 1, "orig_rax"},
+	{64, 1, "rip"},
+	{64, 1, "cs"},
+	{64, 1, "eflags"},
+	{64, 1, "rsp"},
+	{64, 1, "ss"},
+	{64, 1, "fs_base"},
+	{64, 1, "gs_base"},
+	{64, 1, "ds"},
+	{64, 1, "es"},
+	{64, 1, "fs"},
+	{64, 1, "gs"},
+};
+
 PTAMD64CPUState::PTAMD64CPUState(pid_t in_pid)
-	: PTCPUState(in_pid)
+	: PTCPUState(ptamd64_fields, in_pid)
 {
 	state_byte_c = sizeof(struct pt_regs);
 	state_data = new uint8_t[state_byte_c+1];

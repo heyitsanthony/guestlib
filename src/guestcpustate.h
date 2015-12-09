@@ -7,6 +7,7 @@
 #include <sys/user.h>
 #include <assert.h>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <functional>
 
@@ -18,6 +19,7 @@ struct guest_ctx_field
 	unsigned int	f_len;
 	unsigned int	f_count;
 	const char*	f_name;
+	bool		f_export;
 };
 
 #define CASE_OFF2NAME_4(s, m)	\
@@ -41,15 +43,11 @@ typedef std::function<GuestCPUState*(void)> make_guestcpustate_t;
 class GuestCPUState
 {
 public:
-typedef std::map<unsigned int, unsigned int> byte2elem_map;
-typedef std::map<std::string, unsigned int> reg2byte_map;
-	GuestCPUState();
+	GuestCPUState(const guest_ctx_field* f);
 	virtual ~GuestCPUState();
 
 	static void registerCPU(Arch::Arch, make_guestcpustate_t);
 	static GuestCPUState *create(Arch::Arch);
-
-	unsigned int byteOffset2ElemIdx(unsigned int off) const;
 
 	void* getStateData(void) { return state_data; }
 	const void* getStateData(void) const { return state_data; }
@@ -62,6 +60,11 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	virtual void setPC(guest_ptr) = 0;
 	virtual guest_ptr getPC(void) const = 0;
 
+	// offsets
+	const guest_ctx_field* getFields(void) const { return fields; }
+	const char* off2Name(unsigned int off) const;
+	unsigned name2Off(const char* name) const;
+	unsigned byteOffset2ElemIdx(unsigned int off) const;
 	virtual unsigned int getFuncArgOff(unsigned int arg_num) const
 	{ assert (0 == 1 && "STUB"); return 0; }
 	virtual unsigned int getRetOff(void) const
@@ -77,9 +80,6 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	void print(std::ostream& os) const;
 	virtual void print(std::ostream& os, const void* regctx) const = 0;
 
-	virtual const char* off2Name(unsigned int off) const = 0;
-	unsigned name2Off(const char* name) const;
-
 	virtual bool load(const char* fname);
 	virtual bool save(const char* fname);
 
@@ -89,8 +89,6 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	virtual int cpu2gdb(int gdb_off) const
 	{ assert (0 ==1 && "STUB"); return -1; }
 
-	virtual const struct guest_ctx_field* getFields(void) const = 0;
-	unsigned getFieldsSize(const struct guest_ctx_field* f);
 	uint64_t getReg(const char* name, unsigned bits, int off=0) const;
 	void setReg(const char* name, unsigned bits, uint64_t v, int off=0);
 
@@ -99,8 +97,14 @@ typedef std::map<std::string, unsigned int> reg2byte_map;
 	SyscallXlate& getXlate(void) { return *xlate; }
 
 protected:
-	byte2elem_map	off2ElemMap;
-	reg2byte_map	reg2OffMap;
+	typedef std::unordered_map<unsigned int, unsigned int> byte2elem_map_t;
+	typedef std::unordered_map<std::string, unsigned int> reg2byte_map_t;
+	typedef std::unordered_map<unsigned int, std::string> byte2reg_map_t;
+	byte2elem_map_t	off2ElemMap;
+	reg2byte_map_t	reg2OffMap;
+	byte2reg_map_t	off2RegMap;
+
+	const guest_ctx_field	*fields;
 	uint8_t		*state_data;
 	unsigned int	state_byte_c;
 	std::unique_ptr<SyscallXlate>	xlate;

@@ -29,18 +29,6 @@ public:
 		abort();
 	}
 
-	const char* off2Name(unsigned int off) const override {
-		assert(false && "STUB");
-		abort();
-		return nullptr;
-	}
-
-	const struct guest_ctx_field* getFields(void) const override {
-		assert (false && "STUB");
-		abort();
-		return nullptr;
-	}
-
 	// used by ptimgarch
 	struct user_regs_struct& getRegs(void) const;
 	struct user_fpregs_struct& getFPRegs(void) const;
