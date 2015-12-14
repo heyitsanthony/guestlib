@@ -43,6 +43,7 @@ static struct guest_ctx_field ptamd64_fields[] = {
 	pt_field_ent(es),
 	pt_field_ent(fs),
 	pt_field_ent(gs),
+	{0},
 };
 
 PTAMD64CPUState::PTAMD64CPUState(pid_t in_pid)
