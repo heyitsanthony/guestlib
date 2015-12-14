@@ -11,20 +11,24 @@ std::map<Arch::Arch, make_guestcpustate_t> GuestCPUState::makers;
 GuestCPUState::GuestCPUState(const guest_ctx_field* f)
 : fields(f)
 , state_data(NULL)
+, state_byte_c(0)
 , xlate(std::make_unique<SyscallXlate>())
 {
-	unsigned int	cur_byte_off = 0, total_elems = 0;
+	unsigned total_elems = 0;
 
-	assert (f != nullptr);
+	assert (f != nullptr && "need the field labels");
 
 	/* compute the register name/address offsets mappings */
-	cur_byte_off = 0;
-	total_elems = 0;
-
 	for (unsigned i = 0; f[i].f_len != 0; i++) {
+		unsigned cur_byte_off = f[i].f_offset;
+		if (off2ElemMap.count(cur_byte_off)) {
+			auto it =  off2ElemMap.find(cur_byte_off);
+			std::cerr << "CONFLICT: " << f[it->second].f_name
+					<< " vs " << 	f[i].f_name;
+			abort();
+		}
 		for (unsigned int c = 0; c < f[i].f_count; c++) {
 			off2ElemMap[cur_byte_off] = total_elems;
-
 			if (f[i].f_count > 1) {
 				std::stringstream	ss;
 				ss << f[i].f_name << "[" << c << "]";
@@ -33,13 +37,13 @@ GuestCPUState::GuestCPUState(const guest_ctx_field* f)
 				off2RegMap[cur_byte_off] = f[i].f_name;
 			}
 			reg2OffMap[f[i].f_name] = cur_byte_off;
-
-			cur_byte_off += f[i].f_len/ 8;
-			total_elems++;
+			cur_byte_off += f[i].f_len;
 		}
-	}
+		total_elems++;
 
-	state_byte_c = cur_byte_off;
+		if (cur_byte_off > state_byte_c)
+			state_byte_c = cur_byte_off;
+	}
 }
 
 GuestCPUState::~GuestCPUState()
@@ -154,7 +158,7 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 		// dumpIRSBs();
 		for (int i = 0; fields[i].f_len; i++) {
 			fprintf(stderr, "%s@%d\n", fields[i].f_name, c);
-			c += (fields[i].f_len/8) * fields[i].f_count;
+			c += fields[i].f_len * fields[i].f_count;
 		}
 		assert (0 == 1 && "Could not resolve byte offset");
 	}

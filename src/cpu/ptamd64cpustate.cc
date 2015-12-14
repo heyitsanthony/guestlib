@@ -2,6 +2,7 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <cstddef>
 #include "cpu/ptamd64cpustate.h"
 
 #define OPCODE_SYSCALL	0x050f
@@ -11,34 +12,37 @@ struct pt_regs {
 	struct user_fpregs_struct	fpregs;
 };
 
+#define pt_field_ent(x)	{#x, 64, 1, offsetof(user_regs_struct, x), true}
+#define pt_field_ent_s(y,x)	{y, 64, 1, offsetof(user_regs_struct, x), true}
+
 static struct guest_ctx_field ptamd64_fields[] = {
-	{64, 1, "r15"},
-	{64, 1, "r14"},
-	{64, 1, "r13"},
-	{64, 1, "r12"},
-	{64, 1, "rbp"},
-	{64, 1, "rbx"},
-	{64, 1, "r11"},
-	{64, 1, "r10"},
-	{64, 1, "r9"},
-	{64, 1, "r8"},
-	{64, 1, "rax"},
-	{64, 1, "rcx"},
-	{64, 1, "rdx"},
-	{64, 1, "rsi"},
-	{64, 1, "rdi"},
-	{64, 1, "orig_rax"},
-	{64, 1, "rip"},
-	{64, 1, "cs"},
-	{64, 1, "eflags"},
-	{64, 1, "rsp"},
-	{64, 1, "ss"},
-	{64, 1, "fs_base"},
-	{64, 1, "gs_base"},
-	{64, 1, "ds"},
-	{64, 1, "es"},
-	{64, 1, "fs"},
-	{64, 1, "gs"},
+	pt_field_ent_s("R15", r15),
+	pt_field_ent_s("R14", r14),
+	pt_field_ent_s("R13", r13),
+	pt_field_ent_s("R12", r12),
+	pt_field_ent_s("RBP", rbp),
+	pt_field_ent_s("RBX", rbx),
+	pt_field_ent_s("R11", r11),
+	pt_field_ent_s("R10", r10),
+	pt_field_ent_s("R9", r9),
+	pt_field_ent_s("R8", r8),
+	pt_field_ent_s("RAX", rax),
+	pt_field_ent_s("RCX", rcx),
+	pt_field_ent_s("RDX", rdx),
+	pt_field_ent_s("RSI", rsi),
+	pt_field_ent_s("RDI", rdi),
+	pt_field_ent(orig_rax),
+	pt_field_ent_s("RIP", rip),
+	pt_field_ent(cs),
+	pt_field_ent(eflags),
+	pt_field_ent_s("RSP", rsp),
+	pt_field_ent(ss),
+	pt_field_ent(fs_base),
+	pt_field_ent(gs_base),
+	pt_field_ent(ds),
+	pt_field_ent(es),
+	pt_field_ent(fs),
+	pt_field_ent(gs),
 };
 
 PTAMD64CPUState::PTAMD64CPUState(pid_t in_pid)

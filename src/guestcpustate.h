@@ -16,9 +16,10 @@
 
 struct guest_ctx_field
 {
-	unsigned int	f_len;
-	unsigned int	f_count;
 	const char*	f_name;
+	unsigned int	f_len; // in bytes
+	unsigned int	f_count;
+	unsigned int	f_offset;
 	bool		f_export;
 };
 
@@ -43,6 +44,12 @@ typedef std::function<GuestCPUState*(void)> make_guestcpustate_t;
 class GuestCPUState
 {
 public:
+	// byte offset -> field element idx
+	// must be sorted for iterator
+	typedef std::map<unsigned int, unsigned int> byte2elem_map_t;
+	typedef std::unordered_map<std::string, unsigned int> reg2byte_map_t;
+	typedef std::unordered_map<unsigned int, std::string> byte2reg_map_t;
+
 	GuestCPUState(const guest_ctx_field* f);
 	virtual ~GuestCPUState();
 
@@ -61,7 +68,6 @@ public:
 	virtual guest_ptr getPC(void) const = 0;
 
 	// offsets
-	const guest_ctx_field* getFields(void) const { return fields; }
 	const char* off2Name(unsigned int off) const;
 	unsigned name2Off(const char* name) const;
 	unsigned byteOffset2ElemIdx(unsigned int off) const;
@@ -96,10 +102,10 @@ public:
 
 	SyscallXlate& getXlate(void) { return *xlate; }
 
+	const guest_ctx_field& getField(unsigned i) const { return fields[i]; }
+	auto begin() const { return off2ElemMap.begin(); }
+	auto end() const { return off2ElemMap.end(); }
 protected:
-	typedef std::unordered_map<unsigned int, unsigned int> byte2elem_map_t;
-	typedef std::unordered_map<std::string, unsigned int> reg2byte_map_t;
-	typedef std::unordered_map<unsigned int, std::string> byte2reg_map_t;
 	byte2elem_map_t	off2ElemMap;
 	reg2byte_map_t	reg2OffMap;
 	byte2reg_map_t	off2RegMap;
