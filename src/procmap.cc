@@ -221,7 +221,11 @@ void ProcMap::mapLib(pid_t pid)
 		flags | MAP_FIXED,
 		mmap_fd,
 		off);
-	assert (!res && "Could not map library region");
+	if (res) {
+		std::cerr << "Could not map library region \""
+			<< libname << "\" @ " << (void*)mem_begin.o << '\n';
+		abort();
+	}
 
 	assert (mmap_base == mem_begin && "Could not map to same address");
 	if (flags != MAP_SHARED)
