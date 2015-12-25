@@ -1,58 +1,60 @@
 #include <sys/ptrace.h>
 #include <asm/ptrace-abi.h>
+#include <linux/elf.h>
+#include <sys/uio.h>
 #include <string.h>
+#include <cstddef>
 #include "cpu/pti386cpustate.h"
-
-struct x86_user_fpxregs
-{
-  unsigned short int cwd;
-  unsigned short int swd;
-  unsigned short int twd;
-  unsigned short int fop;
-  long int fip;
-  long int fcs;
-  long int foo;
-  long int fos;
-  long int mxcsr;
-  long int reserved;
-  long int st_space[32];   /* 8*16 bytes for each FP-reg = 128 bytes */
-  long int xmm_space[32];  /* 8*16 bytes for each XMM-reg = 128 bytes */
-  long int padding[56];
-};
-
-/* HAHA TOO BAD I CAN'T REUSE A HEADER. */
-struct x86_user_regs
-{
-  long int ebx;
-  long int ecx;
-  long int edx;
-  long int esi;
-  long int edi;
-  long int ebp;
-  long int eax;
-  long int xds;
-  long int xes;
-  long int xfs;
-  long int xgs;
-  long int orig_eax;
-  long int eip;
-  long int xcs;
-  long int eflags;
-  long int esp;
-  long int xss;
-};
 
 struct pt_regs
 {
-	struct user_regs_struct		regs;
-	struct user_fpregs_struct	fpregs;
+	struct x86_user_regs	regs;
+	struct x86_user_fpxregs	fpregs;
 };
 
+#define pt_sz(x)	sizeof((((struct pt_regs*)0)->x))
+#define pt_field_ent(x)		{#x, pt_sz(x), 1, offsetof(struct pt_regs, x), true}
+#define pt_field_ent_s(y,x)	{y, pt_sz(x), 1, offsetof(struct pt_regs, x), true}
+
+static struct guest_ctx_field pti386_fields[] = {
+	pt_field_ent_s("EBX", regs.ebx),
+	pt_field_ent_s("ECX", regs.ecx),
+	pt_field_ent_s("EDX", regs.edx),
+	pt_field_ent_s("ESI", regs.esi),
+	pt_field_ent_s("EDI", regs.edi),
+	pt_field_ent_s("EBP", regs.ebp),
+	pt_field_ent_s("EAX", regs.eax),
+	pt_field_ent_s("DS", regs.xds),
+	pt_field_ent_s("ES", regs.xes),
+	pt_field_ent_s("FS", regs.xfs),
+	pt_field_ent_s("GS", regs.xgs),
+	pt_field_ent_s("orig_EAX", regs.orig_eax),
+	pt_field_ent_s("EIP", regs.eip),
+	pt_field_ent_s("CS", regs.xcs),
+	pt_field_ent_s("EFLAGS", regs.eflags),
+	pt_field_ent_s("ESP", regs.esp),
+	pt_field_ent_s("SS", regs.xss),
+
+	pt_field_ent(fpregs.cwd),
+	pt_field_ent(fpregs.swd),
+	pt_field_ent(fpregs.twd),
+	pt_field_ent(fpregs.fop),
+	pt_field_ent(fpregs.fip),
+	pt_field_ent(fpregs.fcs),
+	pt_field_ent(fpregs.foo),
+	pt_field_ent(fpregs.fos),
+	pt_field_ent(fpregs.mxcsr),
+	pt_field_ent(fpregs.reserved),
+	{ "st_space", 4, 32, offsetof(pt_regs, fpregs.st_space), true },
+	{ "xmm_space", 4, 32, offsetof(pt_regs, fpregs.xmm_space), true },
+	{ "padding", 4, 56, offsetof(pt_regs, fpregs.padding), true },
+	{0},
+};
 
 #define GET_PTREGS()	((struct pt_regs*)state_data)
 
 PTI386CPUState::PTI386CPUState(pid_t in_pid)
-	: PTCPUState(nullptr, in_pid)
+	: PTCPUState(pti386_fields, in_pid)
 {
 	state_byte_c = sizeof(struct pt_regs);
 	state_data = new uint8_t[state_byte_c+1];
@@ -66,20 +68,22 @@ PTI386CPUState::~PTI386CPUState()
 
 guest_ptr PTI386CPUState::undoBreakpoint()
 {
-	// struct x86_user_regs	regs;
-	auto	pr = GET_PTREGS();
-	int	err;
+	auto		pr = GET_PTREGS();
+	struct iovec	iov;
+	int		err;
 
-	/* should be halted on our trapcode. need to set rip prior to
+	/* should be halted on our trapcode. need to set eip prior to
 	 * trapcode addr */
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, pid, NULL, &pr->regs);
+	iov.iov_base = &pr->regs;
+	iov.iov_len = sizeof(pr->regs);
+	err = ptrace((__ptrace_request)PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
 	assert (err != -1);
 
-	pr->regs.rip--; /* backtrack before int3 opcode */
-	err = ptrace((__ptrace_request)PTRACE_SETREGS, pid, NULL, &pr->regs);
+	pr->regs.eip--; /* backtrack before int3 opcode */
+	err = ptrace((__ptrace_request)PTRACE_SETREGSET, pid, NT_PRSTATUS, &iov);
 
 	/* run again w/out reseting BP and you'll end up back here.. */
-	return guest_ptr(getRegs().rip);
+	return guest_ptr(getRegs().eip);
 }
 
 long int PTI386CPUState::setBreakpoint(guest_ptr addr)
@@ -97,35 +101,39 @@ long int PTI386CPUState::setBreakpoint(guest_ptr addr)
 	return old_v;
 }
 
-guest_ptr PTI386CPUState::getStackPtr() const { return guest_ptr(getRegs().rsp); }
+guest_ptr PTI386CPUState::getStackPtr() const { return guest_ptr(getRegs().esp); }
 
 void PTI386CPUState::loadRegs(void) { reloadRegs(); }
 
 void PTI386CPUState::reloadRegs(void) const
 {
-	int				err;
-//	struct x86_user_regs		regs;
-//	struct x86_user_fpxregs		fpregs;
-	auto	pr = GET_PTREGS();
+	int		err;
+	struct iovec 	iov;
+	auto		pr = GET_PTREGS();
 
-	err = ptrace((__ptrace_request)PTRACE_GETREGS, pid, NULL, &pr->regs);
+	iov.iov_base = &pr->regs;
+	iov.iov_len = sizeof(pr->regs);
+	err = ptrace((__ptrace_request)PTRACE_GETREGSET, pid, NT_PRSTATUS, &iov);
 	assert(err != -1);
+	assert(pr->regs.eip != ~0 && "bogus EIP?");
 
-	err = ptrace((__ptrace_request)PTRACE_GETFPREGS, pid, NULL, &pr->fpregs);
+	iov.iov_base = &pr->fpregs;
+	iov.iov_len = sizeof(pr->fpregs);
+	err = ptrace((__ptrace_request)PTRACE_GETREGSET, pid, NT_PRFPREG, &pr->fpregs);
 	assert(err != -1);
 
 	recent_shadow = true;
 }
 
-struct user_regs_struct& PTI386CPUState::getRegs(void) const {
+struct x86_user_regs& PTI386CPUState::getRegs(void) const {
 	if (!recent_shadow) reloadRegs();
 	return GET_PTREGS()->regs;
 }
-struct user_fpregs_struct& PTI386CPUState::getFPRegs(void) const {
+struct x86_user_fpxregs& PTI386CPUState::getFPRegs(void) const {
 	if (!recent_shadow) reloadRegs();
 	return GET_PTREGS()->fpregs;
 }
-void PTI386CPUState::setRegs(const user_regs_struct& regs) {
+void PTI386CPUState::setRegs(const x86_user_regs& regs) {
 	GET_PTREGS()->regs = regs;
 }
 

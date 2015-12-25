@@ -3,6 +3,45 @@
 
 #include "ptcpustate.h"
 
+struct x86_user_fpxregs
+{
+  uint16_t cwd;
+  uint16_t swd;
+  uint16_t twd;
+  uint16_t fop;
+  uint32_t fip;
+  uint32_t fcs;
+  uint32_t foo;
+  uint32_t fos;
+  uint32_t mxcsr;
+  uint32_t reserved;
+  uint32_t st_space[32];   /* 8*16 bytes for each FP-reg = 128 bytes */
+  uint32_t xmm_space[32];  /* 8*16 bytes for each XMM-reg = 128 bytes */
+  uint32_t padding[56];
+};
+
+/* HAHA TOO BAD I CAN'T REUSE A HEADER. */
+struct x86_user_regs
+{
+  uint32_t ebx;
+  uint32_t ecx;
+  uint32_t edx;
+  uint32_t esi;
+  uint32_t edi;
+  uint32_t ebp;
+  uint32_t eax;
+  uint32_t xds;
+  uint32_t xes;
+  uint32_t xfs;
+  uint32_t xgs;
+  uint32_t orig_eax;
+  uint32_t eip;
+  uint32_t xcs;
+  uint32_t eflags;
+  uint32_t esp;
+  uint32_t xss;
+};
+
 class PTI386CPUState : public PTCPUState
 {
 public:
@@ -29,15 +68,10 @@ public:
 		return false;
 	}
 
-	void print(std::ostream& os, const void*) const override {
-		assert(false && "STUB");
-		abort();
-	}
-
 	// used by ptimgarch
-	struct user_regs_struct& getRegs(void) const;
-	struct user_fpregs_struct& getFPRegs(void) const;
-	void setRegs(const user_regs_struct& regs);
+	struct x86_user_regs& getRegs(void) const;
+	struct x86_user_fpxregs& getFPRegs(void) const;
+	void setRegs(const struct x86_user_regs& regs);
 
 private:
 	void reloadRegs(void) const;
