@@ -12,8 +12,8 @@ struct pt_regs {
 	struct user_fpregs_struct	fpregs;
 };
 
-#define pt_field_ent(x)	{#x, 64, 1, offsetof(user_regs_struct, x), true}
-#define pt_field_ent_s(y,x)	{y, 64, 1, offsetof(user_regs_struct, x), true}
+#define pt_field_ent(x)	{#x, 8, 1, offsetof(user_regs_struct, x), true}
+#define pt_field_ent_s(y,x)	{y, 8, 1, offsetof(user_regs_struct, x), true}
 
 static struct guest_ctx_field ptamd64_fields[] = {
 	pt_field_ent_s("R15", r15),

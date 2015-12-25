@@ -24,7 +24,7 @@ GuestCPUState::GuestCPUState(const guest_ctx_field* f)
 		if (off2ElemMap.count(cur_byte_off)) {
 			auto it =  off2ElemMap.find(cur_byte_off);
 			std::cerr << "CONFLICT: " << f[it->second].f_name
-					<< " vs " << 	f[i].f_name;
+					<< " vs " << 	f[i].f_name << '\n';
 			abort();
 		}
 		for (unsigned int c = 0; c < f[i].f_count; c++) {
@@ -100,8 +100,22 @@ const
 	return ((uint64_t*)(state_data+roff))[off];
 }
 
-void GuestCPUState::print(std::ostream& os) const
-{ print(os, getStateData()); }
+static const char hex[] = "0123456789abcdef";
+void GuestCPUState::print(std::ostream& os, const void* regctx) const
+{
+	for (const auto& off2elem : off2ElemMap) {
+		auto byte_off = off2elem.first;
+		auto elem_idx = off2elem.second;
+		os << off2RegMap.find(byte_off)->second << ": ";
+		// XXX reason about endianess; use LE for now
+		for (int i = fields[elem_idx].f_len - 1; i >= 0; i--) {
+			uint8_t	v = ((uint8_t*)regctx)[byte_off + i];
+			os << hex[(v & 0xf0) >> 4] << hex[v & 0xf];
+		}
+		os << '\n';
+	}
+}
+
 
 bool GuestCPUState::load(const char* fname)
 {

@@ -83,8 +83,8 @@ public:
 	virtual void resetSyscall(void)
 	{ assert (0 == 1 && "STUB"); }
 
-	void print(std::ostream& os) const;
-	virtual void print(std::ostream& os, const void* regctx) const = 0;
+	void print(std::ostream& os) const { print(os, getStateData()); }
+	virtual void print(std::ostream& os, const void* regctx) const;
 
 	virtual bool load(const char* fname);
 	virtual bool save(const char* fname);

@@ -24,11 +24,6 @@ public:
 
 	bool isSyscallOp(guest_ptr addr, long v) const override;
 
-	void print(std::ostream& os, const void*) const override {
-		assert(false && "STUB");
-		abort();
-	}
-
 	// used by ptimgarch
 	struct user_regs_struct& getRegs(void) const;
 	struct user_fpregs_struct& getFPRegs(void) const;
