@@ -13,79 +13,45 @@
 
 #include <stdio.h>
 
-Symbols* ElfDebug::getSymsAll(ElfDebug* ed, uintptr_t base)
+Symbols* ElfDebug::getSymsAll(ElfDebug& ed, uintptr_t base)
 {
-	Symbol		*s;
-	Symbols		*ret;
-
-	ret = new Symbols();
-	while ((s = ed->nextSym()) != NULL) {
-		symaddr_t	addr;
-
-		addr = s->getBaseAddr();
+	auto ret = new Symbols();
+	while (auto s = ed.nextSym()) {
+		symaddr_t	addr = s->getBaseAddr();
 		if (s->isCode() && s->getName().size() > 0 && addr) {
-			if (!ed->isExec())
+			if (!ed.isExec())
 				addr += base;
 			ret->addSym(s->getName(), addr, s->getLength());
 		}
-		delete s;
 	}
-
 	return ret;
 }
 
 Symbols* ElfDebug::getSyms(const char* elf_path, uintptr_t base)
 {
-	Symbols		*ret;
-	ElfDebug	*ed;
-
-	ed = new ElfDebug(elf_path);
-	if (ed->is_valid == false) {
-		delete ed;
-		return NULL;
-	}
-
-	ret = getSymsAll(ed, base);
-	delete ed;
-	return ret;
+	ElfDebug	ed(elf_path);
+	return ed.is_valid ? getSymsAll(ed, base) : nullptr;
 }
 
 Symbols* ElfDebug::getSyms(const void* base)
 {
-	Symbols		*ret;
-	ElfDebug	*ed;
-
-	ed = new ElfDebug(base);
-	if (ed->is_valid == false) {
-		delete ed;
-		return NULL;
-	}
-
-	ret = getSymsAll(ed, (uintptr_t)base);
-	delete ed;
-	return ret;
+	ElfDebug ed(base);
+	return ed.is_valid ? getSymsAll(ed, (uintptr_t)base) : nullptr;
 }
 
 Symbols* ElfDebug::getLinkageSyms(
 	const GuestMem* m, const char* elf_path)
 {
 	Symbols		*ret;
-	Symbol		*s;
-	ElfDebug	*ed;
-
-	ed = new ElfDebug(elf_path);
-	if (ed->is_valid == false) {
-		delete ed;
+	ElfDebug	ed(elf_path);
+	if (ed.is_valid == false) {
 		return NULL;
 	}
 
 	ret = new Symbols();
-	while ((s = ed->nextLinkageSym(m)) != NULL) {
+	while (auto s = ed.nextLinkageSym(m)) {
 		ret->addSym(s->getName(), s->getBaseAddr(), s->getLength());
-		delete s;
 	}
-
-	delete ed;
 	return ret;
 
 }
@@ -98,29 +64,26 @@ ElfDebug::ElfDebug(const void* base)
 , rela_tab(NULL)
 , dynsymtab(NULL)
 {
-	elf_arch = ElfImg::getArch(base);
-	if (elf_arch == Arch::Unknown) return;
-
 	/* plow through headers */
-	switch (elf_arch) {
+	switch((elf_arch = ElfImg::getArch(base))) {
 	case Arch::ARM:
 	case Arch::I386:
 		setupTables<Elf32_Ehdr, Elf32_Shdr, Elf32_Sym>();
 		break;
-
 	case Arch::X86_64:
 		setupTables<Elf64_Ehdr, Elf64_Shdr, Elf64_Sym>();
 		break;
+	case Arch::Unknown:
+		return;
 	default:
 		assert (0 ==1 && "elf no bueno");
 	}
-
-	is_valid = true;
 }
 
 
 ElfDebug::ElfDebug(const char* path)
 : is_valid(false)
+, fd(-1)
 , rela_tab(NULL)
 , dynsymtab(NULL)
 {
@@ -159,11 +122,11 @@ ElfDebug::ElfDebug(const char* path)
 
 ElfDebug::~ElfDebug(void)
 {
-	if (!is_valid) return;
-	if (fd != -1) {
-		munmap(img, img_byte_c);
-		close(fd);
+	if (!is_valid || fd == -1) {
+		return;
 	}
+	munmap(img, img_byte_c);
+	close(fd);
 }
 
 template <typename Elf_Ehdr, typename Elf_Shdr, typename Elf_Sym>
@@ -243,13 +206,12 @@ void ElfDebug::setupTables(void)
 		sym_count = 0;
 }
 
-Symbol* ElfDebug::nextSym(void)
+std::unique_ptr<Symbol> ElfDebug::nextSym(void)
 {
 	switch (elf_arch) {
 	case Arch::ARM:
 	case Arch::I386:
 		return nextSym32();
-
 	case Arch::X86_64:
 		return nextSym64();
 	default:
@@ -260,7 +222,7 @@ Symbol* ElfDebug::nextSym(void)
 }
 
 #define NEXTSYM_BITS(x)	\
-Symbol* ElfDebug::nextSym##x(void)		\
+std::unique_ptr<Symbol> ElfDebug::nextSym##x(void)		\
 {	\
 	Elf##x##_Sym	*sym = (Elf##x##_Sym*)symtab;	/* FIXME */	\
 	Elf##x##_Sym	*cur_sym;	\
@@ -278,8 +240,7 @@ Symbol* ElfDebug::nextSym##x(void)		\
 	if (atat) {				\
 		name = name.substr(0, atat - name_c);	\
 	}	\
-\
-	return new Symbol(	\
+	return std::make_unique<Symbol>(	\
 		name,	\
 		cur_sym->st_value,	\
 		cur_sym->st_size,	\
@@ -291,7 +252,7 @@ NEXTSYM_BITS(32)
 NEXTSYM_BITS(64)
 
 #define NEXTLINKSYM_BITS(x)	\
-Symbol* ElfDebug::nextLinkageSym##x(const GuestMem* m)	\
+std::unique_ptr<Symbol> ElfDebug::nextLinkageSym##x(const GuestMem* m)	\
 {	\
 	Elf##x##_Sym	*cur_sym;	\
 	guest_ptr	guest_sym;	\
@@ -307,7 +268,7 @@ Symbol* ElfDebug::nextLinkageSym##x(const GuestMem* m)	\
 	name_c = &dynstrtab[cur_sym->st_name];	\
 	guest_sym = guest_ptr(rela->r_offset);	\
 \
-	return new Symbol(	\
+	return std::make_unique<Symbol>(	\
 		name_c,	\
 		m->read<uint64_t>(guest_sym)-6,	\
 		6,	\
@@ -318,18 +279,16 @@ Symbol* ElfDebug::nextLinkageSym##x(const GuestMem* m)	\
 NEXTLINKSYM_BITS(32)
 NEXTLINKSYM_BITS(64)
 
-Symbol* ElfDebug::nextLinkageSym(const GuestMem* m)
+std::unique_ptr<Symbol> ElfDebug::nextLinkageSym(const GuestMem* m)
 {
 	switch (elf_arch) {
 	case Arch::ARM:
 	case Arch::I386:
 		return nextLinkageSym32(m);
-
 	case Arch::X86_64:
 		return nextLinkageSym64(m);
 	default:
 		assert (0 ==1 && "elf no bueno");
 	}
-
 	return NULL;
 }

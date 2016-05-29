@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <map>
 #include <string>
+#include <memory>
 
 typedef uintptr_t symaddr_t;
 
@@ -39,7 +40,7 @@ private:
  */
 
 typedef std::map<std::string, Symbol*> symname_map;
-typedef std::map<symaddr_t, Symbol*> symaddr_map;
+typedef std::map<symaddr_t, std::unique_ptr<Symbol>> symaddr_map;
 
 class Symbols
 {

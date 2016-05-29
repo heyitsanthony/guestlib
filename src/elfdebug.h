@@ -28,16 +28,16 @@ private:
 		typename Elf_Sym>
 		void setupTables(void);
 
-	Symbol	*nextSym(void);
-	Symbol	*nextSym32(void);
-	Symbol	*nextSym64(void);
+	std::unique_ptr<Symbol>	nextSym(void);
+	std::unique_ptr<Symbol>	nextSym32(void);
+	std::unique_ptr<Symbol>	nextSym64(void);
 
-	Symbol	*nextLinkageSym(const GuestMem* m);
-	Symbol	*nextLinkageSym32(const GuestMem* m);
-	Symbol	*nextLinkageSym64(const GuestMem* m);
+	std::unique_ptr<Symbol>	nextLinkageSym(const GuestMem* m);
+	std::unique_ptr<Symbol> nextLinkageSym32(const GuestMem* m);
+	std::unique_ptr<Symbol> nextLinkageSym64(const GuestMem* m);
 	bool isExec(void) const { return is_exec; }
 
-	static Symbols* getSymsAll(ElfDebug* ed, uintptr_t base);
+	static Symbols* getSymsAll(ElfDebug& ed, uintptr_t base);
 
 	bool	is_valid;
 	bool	is_exec;

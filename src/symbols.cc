@@ -3,11 +3,7 @@
 #include <assert.h>
 #include "symbols.h"
 
-Symbols::~Symbols()
-{
-	/* free all allocated symbols */
-	for (auto &p : addr_map) delete p.second;
-}
+Symbols::~Symbols() {}
 
 Symbols::Symbols(const Symbols& s)
 {
@@ -33,7 +29,7 @@ const Symbol* Symbols::findSym(uint64_t ptr) const
 	if (it == addr_map.end())
 		return NULL;
 
-	ret = it->second;
+	ret = it->second.get();
 	if (ret->getBaseAddr() == (symaddr_t)ptr)
 		return ret;
 
@@ -41,7 +37,7 @@ const Symbol* Symbols::findSym(uint64_t ptr) const
 	if (it == addr_map.end())
 		return NULL;
 
-	ret = it->second;
+	ret = it->second.get();
 	assert (ret->getBaseAddr() <= (symaddr_t)ptr && "WTF");
 
 	if ((symaddr_t)ptr > ret->getEndAddr())
@@ -55,10 +51,9 @@ bool Symbols::addSym(const std::string& name, symaddr_t addr, unsigned int len)
 	if (addr_map.count(addr)) return false;
 	if (name_map.count(name)) return false;
 
-	auto sym  = new Symbol(name, addr, len);
-	addr_map[addr] = sym;
-	name_map[name] = sym;
-
+	auto sym  = std::make_unique<Symbol>(name, addr, len);
+	name_map[name] = sym.get();
+	addr_map.emplace(addr, std::move(sym));
 	return true;
 }
 
