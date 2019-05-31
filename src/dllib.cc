@@ -1,5 +1,6 @@
+#include <iostream>
+
 #include <dlfcn.h>
-#include <stdio.h>
 #include <assert.h>
 #include "dllib.h"
 
@@ -54,7 +55,7 @@ void* DLLib::resolve(const char* symname)
 	dlerror();	/* clear errors */
 	ret = dlsym(dl_h, symname);
 	err = dlerror();
-	if (err) fprintf(stderr, "dlsym OOPS: %s\n", err);
-
+	if (err) 
+		std::cerr << "[DLLib] resolve error " << err << '\n';
 	return ret;
 }

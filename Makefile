@@ -52,7 +52,7 @@ $(OUTDIRS):
 	mkdir -p $(OUTDIRS)
 
 obj/%.o: src/%.s
-	gcc -c -o $@ $< $(CFLAGS)
+	$(CORECC) -c -o $@ $< $(CFLAGS)
 
 obj/%.o: src/%.cc src/%.h
 	$(CORECC) -c -o $@ $< $(CFLAGS)

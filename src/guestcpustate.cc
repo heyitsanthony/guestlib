@@ -168,7 +168,7 @@ unsigned int GuestCPUState::byteOffset2ElemIdx(unsigned int off) const
 	auto it = off2ElemMap.find(off);
 	if (it == off2ElemMap.end()) {
 		unsigned int	c = 0;
-		fprintf(stderr, "WTF IS AT %d\n", off);
+		std::cerr << "[GuestCPUState] unknown field at " << off << '\n';
 		// dumpIRSBs();
 		for (int i = 0; fields[i].f_len; i++) {
 			fprintf(stderr, "%s@%d\n", fields[i].f_name, c);
@@ -193,7 +193,7 @@ GuestCPUState* GuestCPUState::create(Arch::Arch a)
 
 void GuestCPUState::noteRegion(const char* name, guest_ptr addr)
 {
-	std::cerr	<< "Unexpected region '" << name
+	std::cerr	<< "[GuestCPUState] unexpected region '" << name
 			<< "' at " << (void*)addr.o << '\n';
 }
 

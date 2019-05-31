@@ -41,7 +41,7 @@ GuestMem::GuestMem(void)
 		} else {
 			base = (char*)((uintptr_t)atoi(base_str));
 		}
-		fprintf(stderr, "[Guest] Rebased to %p\n", base);
+		std::cerr << "[GuestMem] rebased to " << (void*)base << '\n';
 	}
 
 	/* since we are managing the address space now,

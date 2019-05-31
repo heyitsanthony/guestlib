@@ -90,31 +90,30 @@ void PTImgArch::checkWSS(void)
 			/* trap is expected for single-stepping */
 			break;
 		case SIGFPE:
-			fprintf(stderr, "[PTImgArch] FPE!\n");
+			std::cerr << "[PTImgArch] FPE!\n";
 			handleBadProgress();
 			break;
 
 		case SIGSEGV:
-			fprintf(stderr, "[PTImgArch] SIGSEGV!\n");
+			std::cerr << "[PTImgArch] SIGSEGV!\n";
 			handleBadProgress();
 			break;
 
 		case SIGILL: {
-			fprintf(stderr,
-				"[PTImgArch] Illegal instruction at %p!!!\n",
-				(void*)gs->getCPUState()->getPC().o);
+			std::cerr << "[PTImgArch] Illegal instruction at "
+				  << (void*)gs->getCPUState()->getPC().o << '\n';
 			handleBadProgress();
 			break;
 		}
 		default:
-			fprintf(stderr,
-				"[PTImgArch] ptrace bad single step status=%d\n",
-				WSTOPSIG(wss_status));
+			std::cerr << "[PTImgArch] ptrace bad single step status="
+				  <<  WSTOPSIG(wss_status) << '\n';
 			handleBadProgress();
 			break;
 		}
 	} else {
-		fprintf(stderr, "STATUS: %lx\n", (unsigned long)wss_status);
+		std::cerr << "[PTImgArch] bad stop wss status "
+			  << (void*)(long)wss_status << '\n';
 		perror("Unknown status in waitForSingleStep");
 		abort();
 	}
@@ -131,7 +130,7 @@ void PTImgArch::waitForSingleStep(void)
 		char	c = "/-\\|/-\\|"[(steps / log_gauge_overflow)%8];
 		fprintf(stderr,
 			//"STEPS %09"PRIu64" %c %09"PRIu64" BLOCKS\r",
-			"STEPS %09" PRIu64 " %c %09" PRIu64 " BLOCKS\n",
+			"[PTImgArch] STEPS %09" PRIu64 " %c %09" PRIu64 " BLOCKS\n",
 			steps, c, blocks);
 	}
 }
@@ -152,10 +151,10 @@ guest_ptr PTImgArch::stepToBreakpoint(void)
 	wait(&status);
 
 	if (!(WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP)) {
-		fprintf(stderr,
-			"OOPS. status: stopped=%d sig=%d status=%p\n",
-			WIFSTOPPED(status), WSTOPSIG(status),
-			(void*)(long)status);
+		std::cerr << "[PTImgArch] bad stop. status:"
+			     " stopped=" << WIFSTOPPED(status) <<
+			     " sig=" << WSTOPSIG(status) <<
+			     " status=" << (void*)(long)status << '\n';
 		// stackTraceShadow(std::cerr, guest_ptr(0),  guest_ptr(0));
 		assert (0 == 1 && "bad wait from breakpoint");
 	}

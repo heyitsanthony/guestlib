@@ -2,7 +2,6 @@
 #include <sys/wait.h>
 #include <stddef.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/ptrace.h>
@@ -103,7 +102,6 @@ void GuestPTImg::attachSyscall(int pid)
 	assert (err != -1);
 	wait(&status);
 	assert (IS_SIGTRAP(status));
-//	fprintf(stderr, "Got syscall from PID=%d\n", pid);
 	slurpBrains(pid);
 	fixupRegsPreSyscall(pid);
 }
@@ -122,7 +120,7 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	int	err, status;
 
 	// assert (entry_pt.o == 0 && "Only support attaching immediately");
-	fprintf(stderr, "Attaching to PID=%d\n", pid);
+	std::cerr << "[GuestPTImg] Attaching to PID=" << pid << '\n';
 
 	SETUP_ARCH_PT
 
@@ -130,9 +128,9 @@ pid_t GuestPTImg::createSlurpedAttach(int pid)
 	assert (err != -1 && "Couldn't attach to process");
 
 	wait(&status);
-	fprintf(stderr, "ptrace status=%x\n", status);
+	std::cerr << "[GuestPTImg] ptrace status=" << status << '\n';
 	assert (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP);
-	fprintf(stderr, "Attached to PID=%d\n", pid);
+	std::cerr << "[GuestPTImg] attached to PID=" << pid << '\n';
 
 	if (getenv("GUEST_NOSYSCALL") == NULL)
 		attachSyscall(pid);
@@ -164,8 +162,6 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	int		status;
 	guest_ptr	cur_pc, break_addr;
 
-	fprintf(stderr, "[GuestPTImg] creating ptimg from guest\n");
-
 	pid = fork();
 	if (pid < 0) return pid;
 	if (pid == 0) {
@@ -195,8 +191,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 	/* Trapped the process on execve-- binary is loaded, but not linked */
 	/* overwrite entry with BP. */
 	cur_pc = gs->getCPUState()->getPC();
-	fprintf(stderr,
-		"[GuestPTImg] setting bp on cur_pc=%p\n", (void*)cur_pc.o);
+	std::cerr << "[GuestPTImg] setting bp on cur_pc=" << (void*)cur_pc.o << '\n';
 	setBreakpoint(cur_pc);
 
 	/* run until child hits cur_pc */
@@ -229,7 +224,7 @@ pid_t GuestPTImg::createFromGuest(Guest* gs)
 
 	entry_pt = cur_pc;
 
-	fprintf(stderr, "[GuestPTImg] Guest state cloned to process %d\n", pid);
+	std::cerr << "[GuestPTImg] Guest state cloned to process " << pid << '\n';
 	return pid;
 }
 
@@ -273,7 +268,6 @@ bool GuestPTImg::slurpChildOnSyscall(
 
 	if (ProcMap::dump_maps) dumpSelfMap();
 
-	std::cerr << "[GuestPTImg] Loading child process\n";
 	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
@@ -349,7 +343,6 @@ bool GuestPTImg::slurpChild(pid_t pid, char *const argv[])
 
 	if (ProcMap::dump_maps) dumpSelfMap();
 
-	std::cerr << "[GuestPTImg] Loading child process\n";
 	/* slurp brains after trap code is removed so that we don't
 	 * copy the trap code into the parent process */
 	slurpBrains(pid);
@@ -403,8 +396,7 @@ void GuestPTImg::slurpArgPtrs(char *const argv[])
 		in_argv.o += mem->strlen(in_argv) + 1;
 	}
 #else
-	fprintf(stderr,
-		"[Guest] WARNING: can not get argv for current arch\n");
+	std::cerr << "[GuestPTImg] can not get argv for current arch\n";
 #endif
 }
 
@@ -673,7 +665,7 @@ void GuestPTImg::dumpSelfMap(void)
 	while (!feof(f_self)) {
 		if (fgets(buf, 256, f_self) == NULL)
 			break;
-		fprintf(stderr, "[ME] %s", buf);
+		std::cerr <<  "[ME] " << buf;
 	}
 	fclose(f_self);
 }

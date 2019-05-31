@@ -113,22 +113,22 @@ bool ProcMap::procMemCopy(pid_t pid, guest_ptr m_beg, guest_ptr m_end)
 	sprintf(path, "/proc/%d/mem", pid);
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
-		fprintf(stderr, "Could not open %s\n", path);
+		std::cerr << "[ProcMap] could not open " << path << '\n';
 		return false;
 	}
 
 	off = lseek(fd, m_beg.o, SEEK_SET);
 	if (off != (off_t)m_beg.o) {
-		fprintf(stderr, "Could not seek to %p\n", (void*)m_beg.o);
+		std::cerr << "[ProcMap] could not seek to "
+			  << (void*)m_beg.o << '\n';
 		goto done;
 	}
 
 	br = read(fd, mem->getHostPtr(m_beg), m_end - m_beg);
 	if (br != (ssize_t)(m_end - m_beg)) {
-		fprintf(stderr, "Could not read %d bytes. Got=%d. error=%s\n",
-			(int)(m_end - m_beg),
-			(int)br,
-			strerror(errno));
+		std::cerr << "[ProcMap] could not read "
+			  << (int)(m_end - m_beg) << " bytes. Got="
+			  << (int)br << "error=" << strerror(errno) << '\n';
 		goto done;
 	}
 
@@ -156,8 +156,10 @@ void ProcMap::mapAnon(pid_t pid)
 		mmap_fd,
 		off);
 	if (res) {
-		fprintf(stderr, "Failed to map base=%p. len=%p.\n",
-			(void*)(long)mmap_base.o, (void*)(long)getByteCount());
+		std::cerr << "[ProcMap] failed to map base="
+			  << (void*)(long)mmap_base.o
+			  << ". len=" << (void*)(long)getByteCount()
+			  << '\n';
 	}
 	assert (!res && "Could not map anonymous region");
 
@@ -187,13 +189,13 @@ void ProcMap::mapLib(pid_t pid)
 	if (strcmp(libname, "[vvar]") == 0) {
 		/* can't ptrace because of weirdo semantics; if vdso is replaced
 		 * it shouldn't matter though */
-		fprintf(stderr, "[ProcMap] Ignoring idiotic [vvar]\n");
+		std::cerr << "[ProcMap] Unhandled [vvar] segment\n";
 		libname[1] = 'X';
 		mmap_fd = -1;
 		copy = false;
 	} else if (strncmp(libname, "/dev/", 5) == 0) {
 		/* don't load /dev/ files-- problems with alsa in dosbox */
-		fprintf(stderr, "[ProcMap] Ignoring device file %s\n", libname);
+		std::cerr << "[ProcMap] Unhandled device file " << libname << '\n';
 		libname[0] = 'X';
 		libname[1] = '\0';
 		mmap_fd = -1;
@@ -261,11 +263,12 @@ void ProcMap::ptraceCopyRange(
 		long peek_data;
 		peek_data = ptrace(PTRACE_PEEKDATA, pid, copy_addr.o, NULL);
 		if (peek_data == -1 && errno) {
-			fprintf(stderr,
-				"Bad access: addr=%p lib=%s (%p--%p) err=%s\n",
-				(void*)copy_addr.o, libname,
-				(void*)mem_begin.o, (void*)mem_end.o,
-				strerror(errno));
+			std::cerr << "[ProcMap] bad access:"
+				     " addrs=" << (void*)copy_addr.o <<
+				     " lib=" << libname <<
+				     " (" << (void*)mem_begin.o <<
+				     "--" << (void*)mem_end.o << ")" <<
+				     " err=" << strerror(errno) << '\n';
 		}
 		assert (peek_data != -1 || errno == 0);
 
@@ -337,7 +340,7 @@ ProcMap::ProcMap(GuestMem* in_mem, pid_t pid, const char* mapline, bool _copy)
 		return;
 	}
 
-	if (dump_maps) fprintf(stderr, "ProcMap: %s", mapline);
+	if (dump_maps) std::cerr << "[ProcMap] mapline: " << mapline;
 
 	/* now map it in */
 	if (strlen(libname) <= 0) {

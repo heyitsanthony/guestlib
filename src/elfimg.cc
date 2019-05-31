@@ -18,8 +18,6 @@
 
 #include <vector>
 
-#define WARNING(x)	fprintf(stderr, "WARNING: " x "\n")
-
 #define ElfImg32 ElfImg
 #define ElfImg64 ElfImg
 
@@ -197,7 +195,7 @@ void ElfImg::setupSegments(void)
 static const unsigned char ok_ident_64[] = "\x7f""ELF\x2\x1\x1";
 static const unsigned char ok_ident_32[] = "\x7f""ELF\x1\x1\x1";
 
-#define EXPECTED(x)	fprintf(stderr, "ELF: expected " x "!\n")
+#define EXPECTED(x)	std::cerr << "[ElfImg] expected " x "!\n"
 
 guest_ptr ElfImg::getEntryPoint(void) const
 {

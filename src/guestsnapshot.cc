@@ -155,9 +155,8 @@ void GuestSnapshot::loadMappings(void)
 		assert (fd != -1);
 
 		if (mem->is32Bit() && (begin.o > (1ULL << 32))) {
-			fprintf(stderr,
-				"[Guest] Snapshot ignoring %p\n",
-				(void*)begin.o);
+			std::cerr << "[GuestSnapshot] ignoring address "
+				  << (void*)begin.o << '\n';
 			continue;
 		}
 
@@ -186,9 +185,9 @@ void GuestSnapshot::loadMappings(void)
 			0);
 
 		if (res != 0) {
-			fprintf(stderr, "Failed to addr=%p--%p\n",
-				(void*)begin.o,
-				(void*)(begin.o + length));
+			std::cerr << "[GuestSnapshot] failed on region="
+				  << (void*)begin.o << "--"
+				  << (void*)(begin.o + length) << '\n';
 		}
 		assert (res == 0 && "failed to map region on ss load");
 		mem->setType(mmap_addr, map_type);
